@@ -76,6 +76,9 @@ class Connection extends \Doctrine\DBAL\Connection {
 	/** @var int */
 	protected $queriesExecuted = 0;
 
+	// Used by migrateToSchema to emit the SQL queries instead of running them.
+	protected bool $dryRun = false;
+
 	/**
 	 * @throws Exception
 	 */
@@ -534,6 +537,10 @@ class Connection extends \Doctrine\DBAL\Connection {
 		return $migrator->createSchema();
 	}
 
+	public function setDryRun(bool $value) {
+		$this->dryRun = $value;
+	}
+
 	/**
 	 * Migrate the database to the given schema
 	 *
@@ -543,7 +550,7 @@ class Connection extends \Doctrine\DBAL\Connection {
 	 */
 	public function migrateToSchema(Schema $toSchema) {
 		$migrator = $this->getMigrator();
-		$migrator->migrate($toSchema);
+		$migrator->migrate($toSchema, $this->dryRun);
 	}
 
 	private function getMigrator() {

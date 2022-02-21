@@ -38,6 +38,7 @@ use OC\DB\Connection;
 use OC\DB\SchemaWrapper;
 use OCP\IDBConnection;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -69,10 +70,14 @@ class AddMissingIndices extends Command {
 	protected function configure() {
 		$this
 			->setName('db:add-missing-indices')
-			->setDescription('Add missing indices to the database tables');
+			->setDescription('Add missing indices to the database tables')
+			->addOption('dry-run', null, InputOption::VALUE_NONE, "Output the SQL queries instead of running them.");
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
+		$this->connection->setDryRun($input->getOption('dry-run'));
+		$this->dispatcher->addListener('\OC\DB\Migrator::executeSql', fn ($event) => $output->writeln($event->getSubject()));
+
 		$this->addCoreIndexes($output);
 
 		// Dispatch event so apps can also update indexes if needed
