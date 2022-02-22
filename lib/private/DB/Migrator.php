@@ -68,13 +68,12 @@ class Migrator {
 
 	/**
 	 * @param \Doctrine\DBAL\Schema\Schema $targetSchema
-	 * @param bool $dryRun Will emit the SQL queries instead of running them.
 	 *
 	 * @throws Exception
 	 */
-	public function migrate(Schema $targetSchema, bool $dryRun = false) {
-		$this->noEmit = !$dryRun;
-		$this->applySchema($targetSchema, null, $dryRun);
+	public function migrate(Schema $targetSchema) {
+		$this->noEmit = true;
+		$this->applySchema($targetSchema);
 	}
 
 	/**
@@ -156,11 +155,10 @@ class Migrator {
 	/**
 	 * @param \Doctrine\DBAL\Schema\Schema $targetSchema
 	 * @param \Doctrine\DBAL\Connection $connection
-	 * @param bool $dryRun Will emit the SQL queries instead of running them.
 	 *
 	 * @throws Exception
 	 */
-	protected function applySchema(Schema $targetSchema, \Doctrine\DBAL\Connection $connection = null, bool $dryRun = false) {
+	protected function applySchema(Schema $targetSchema, \Doctrine\DBAL\Connection $connection = null) {
 		if (is_null($connection)) {
 			$connection = $this->connection;
 		}
@@ -174,11 +172,6 @@ class Migrator {
 		$step = 0;
 		foreach ($sqls as $sql) {
 			$this->emit($sql, $step++, count($sqls));
-
-			if ($dryRun) {
-				continue;
-			}
-
 			$connection->query($sql);
 		}
 		if (!$connection->getDatabasePlatform() instanceof MySQLPlatform) {

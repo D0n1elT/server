@@ -49,6 +49,9 @@ class AddMissingPrimaryKeys extends Command {
 	/** @var Connection */
 	private $connection;
 
+	/** @var Connection */
+	private $wrapperConnection;
+
 	/** @var EventDispatcherInterface */
 	private $dispatcher;
 
@@ -56,6 +59,7 @@ class AddMissingPrimaryKeys extends Command {
 		parent::__construct();
 
 		$this->connection = $connection;
+		$this->wrapperConnection = $connection;
 		$this->dispatcher = $dispatcher;
 	}
 
@@ -67,8 +71,9 @@ class AddMissingPrimaryKeys extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		$this->connection->setDryRun($input->getOption('dry-run'));
-		$this->dispatcher->addListener('\OC\DB\Migrator::executeSql', fn ($event) => $output->writeln($event->getSubject()));
+		if ($input->getOption('dry-run')) {
+			$this->connection = new DryRunConnectionDecorator($this->connection, $output);
+		}
 
 		$this->addCorePrimaryKeys($output);
 
@@ -87,7 +92,7 @@ class AddMissingPrimaryKeys extends Command {
 	private function addCorePrimaryKeys(OutputInterface $output) {
 		$output->writeln('<info>Check primary keys.</info>');
 
-		$schema = new SchemaWrapper($this->connection);
+		$schema = new SchemaWrapper($this->wrapperConnection);
 		$updated = false;
 
 		if ($schema->hasTable('federated_reshares')) {

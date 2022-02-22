@@ -36,6 +36,7 @@ namespace OC\Core\Command\Db;
 use Doctrine\DBAL\Platforms\PostgreSQL94Platform;
 use OC\DB\Connection;
 use OC\DB\SchemaWrapper;
+use OC\Core\Command\Db\DryRunConnectionDecorator;
 use OCP\IDBConnection;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
@@ -57,6 +58,9 @@ class AddMissingIndices extends Command {
 	/** @var Connection */
 	private $connection;
 
+	/** @var Connection */
+	private $wrapperConnection;
+
 	/** @var EventDispatcherInterface */
 	private $dispatcher;
 
@@ -64,6 +68,7 @@ class AddMissingIndices extends Command {
 		parent::__construct();
 
 		$this->connection = $connection;
+		$this->wrapperConnection = $connection;
 		$this->dispatcher = $dispatcher;
 	}
 
@@ -75,8 +80,9 @@ class AddMissingIndices extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		$this->connection->setDryRun($input->getOption('dry-run'));
-		$this->dispatcher->addListener('\OC\DB\Migrator::executeSql', fn ($event) => $output->writeln($event->getSubject()));
+		if ($input->getOption('dry-run')) {
+			$this->connection = new DryRunConnectionDecorator($this->connection, $output);
+		}
 
 		$this->addCoreIndexes($output);
 
@@ -95,7 +101,7 @@ class AddMissingIndices extends Command {
 	private function addCoreIndexes(OutputInterface $output) {
 		$output->writeln('<info>Check indices of the share table.</info>');
 
-		$schema = new SchemaWrapper($this->connection);
+		$schema = new SchemaWrapper($this->wrapperConnection);
 		$updated = false;
 
 		if ($schema->hasTable('share')) {

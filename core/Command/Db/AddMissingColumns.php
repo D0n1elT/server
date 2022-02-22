@@ -49,6 +49,9 @@ class AddMissingColumns extends Command {
 	/** @var Connection */
 	private $connection;
 
+	/** @var Connection */
+	private $wrapperConnection;
+
 	/** @var EventDispatcherInterface */
 	private $dispatcher;
 
@@ -56,6 +59,7 @@ class AddMissingColumns extends Command {
 		parent::__construct();
 
 		$this->connection = $connection;
+		$this->wrapperConnection = $connection;
 		$this->dispatcher = $dispatcher;
 	}
 
@@ -67,8 +71,9 @@ class AddMissingColumns extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		$this->connection->setDryRun($input->getOption('dry-run'));
-		$this->dispatcher->addListener('\OC\DB\Migrator::executeSql', fn ($event) => $output->writeln($event->getSubject()));
+		if ($input->getOption('dry-run')) {
+			$this->connection = new DryRunConnectionDecorator($this->connection, $output);
+		}
 
 		$this->addCoreColumns($output);
 
@@ -87,7 +92,7 @@ class AddMissingColumns extends Command {
 	private function addCoreColumns(OutputInterface $output) {
 		$output->writeln('<info>Check columns of the comments table.</info>');
 
-		$schema = new SchemaWrapper($this->connection);
+		$schema = new SchemaWrapper($this->wrapperConnection);
 		$updated = false;
 
 		if ($schema->hasTable('comments')) {

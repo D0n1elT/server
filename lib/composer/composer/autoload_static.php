@@ -1045,6 +1045,7 @@ class ComposerStaticInit53792487c5a8370acc0b06b1a864ff4c
         'OC\\DB\\Connection' => __DIR__ . '/../../..' . '/lib/private/DB/Connection.php',
         'OC\\DB\\ConnectionAdapter' => __DIR__ . '/../../..' . '/lib/private/DB/ConnectionAdapter.php',
         'OC\\DB\\ConnectionFactory' => __DIR__ . '/../../..' . '/lib/private/DB/ConnectionFactory.php',
+        'OC\\DB\\DryRunConnectionDecorator' => __DIR__ . '/../../..' . '/lib/private/DB/DryRunConnectionDecorator.php',
         'OC\\DB\\Exceptions\\DbalException' => __DIR__ . '/../../..' . '/lib/private/DB/Exceptions/DbalException.php',
         'OC\\DB\\MigrationException' => __DIR__ . '/../../..' . '/lib/private/DB/MigrationException.php',
         'OC\\DB\\MigrationService' => __DIR__ . '/../../..' . '/lib/private/DB/MigrationService.php',
