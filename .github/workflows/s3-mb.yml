@@ -1,0 +1,116 @@
+name: S3 Multibucket primary storage
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - stable*
+
+
+jobs:
+  s3-mb-tests-minio:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # do not stop on another job's failure
+      fail-fast: false
+      matrix:
+        php-versions: ['8.0']
+
+    name: php${{ matrix.php-versions }}-multibucket-minio
+
+    services:
+      minio:
+        env:
+          MINIO_ACCESS_KEY: minio
+          MINIO_SECRET_KEY: minio123
+        image: bitnami/minio:2021.10.6
+        ports:
+          - "9000:9000"
+
+    steps:
+      - name: Checkout server
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Set up php ${{ matrix.php-versions }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          tools: phpunit
+          extensions: mbstring, fileinfo, intl, sqlite, pdo_sqlite, zip, gd
+
+      - name: Set up Nextcloud
+        run: |
+          mkdir data
+          echo '<?php $CONFIG=["objectstore_multibucket" => ["class" => "OC\Files\ObjectStore\S3", "arguments" => ["bucket" => "nextcloud", "autocreate" => true, "key" => "minio", "secret" => "minio123", "hostname" => "localhost", "port" => 9000, "use_ssl" => false, "use_path_style" => true, "uploadPartSize" => 52428800]]];' > config/config.php
+          ./occ maintenance:install --verbose --database=sqlite --database-name=nextcloud --database-host=127.0.0.1 --database-user=root --database-pass=rootpassword --admin-user admin --admin-pass password
+          php -f index.php
+
+      - name: PHPUnit
+        working-directory: tests
+        run: phpunit --configuration phpunit-autotest.xml --group DB,SLOWDB
+      - name: S3 logs
+        if: always()
+        run: |
+          docker ps -a
+          docker logs $(docker ps -aq)
+  s3-mb-tests-localstack:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # do not stop on another job's failure
+      fail-fast: false
+      matrix:
+        php-versions: ['8.0']
+
+    name: php${{ matrix.php-versions }}-multibucket-localstack
+
+    services:
+      minio:
+        env:
+          SERVICES: s3
+          DEBUG: 1
+        image: localstack/localstack:0.12.7
+        ports:
+          - "4566:4566"
+
+    steps:
+      - name: Checkout server
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Set up php ${{ matrix.php-versions }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          tools: phpunit
+          extensions: mbstring, fileinfo, intl, sqlite, pdo_sqlite, zip, gd
+
+      - name: Set up Nextcloud
+        run: |
+          mkdir data
+          echo '<?php $CONFIG=["objectstore_multibucket" => ["class" => "OC\Files\ObjectStore\S3", "arguments" => ["bucket" => "nextcloud", "autocreate" => true, "key" => "ignored", "secret" => "ignored", "hostname" => "localhost", "port" => 4566, "use_ssl" => false, "use_path_style" => true, "uploadPartSize" => 52428800]]];' > config/config.php
+          ./occ maintenance:install --verbose --database=sqlite --database-name=nextcloud --database-host=127.0.0.1 --database-user=root --database-pass=rootpassword --admin-user admin --admin-pass password
+          php -f index.php
+
+      - name: PHPUnit
+        working-directory: tests
+        run: phpunit --configuration phpunit-autotest.xml --group DB,SLOWDB
+      - name: S3 logs
+        if: always()
+        run: |
+          docker ps -a
+          docker logs $(docker ps -aq)
+
+  s3-mb-summary:
+    runs-on: ubuntu-latest
+    needs: [s3-mb-tests-minio, s3-mb-tests-localstack]
+
+    if: always()
+
+    steps:
+      - name: Summary status
+        run: if ${{ needs.s3-external-mb-minio.result != 'success' }} || ${{ needs.s3-external-mb-localstack.result != 'success' }}; then exit 1; fi
