@@ -79,7 +79,7 @@ class Availability extends Wrapper {
 	 */
 	private function isAvailable() {
 		$availability = $this->getAvailability();
-		if (self::shouldRecheck($availability)) {
+		if ($availability === null || self::shouldRecheck($availability)) {
 			return $this->updateAvailability();
 		}
 		return $availability['available'];
