@@ -137,6 +137,21 @@ class Generator {
 			$previewVersion = $file->getPreviewVersion() . '-';
 		}
 
+		if (count($specifications) === 1 && $specifications[0]['width'] === 250
+			&& $specifications[0]['height'] === 250 && str_starts_with($mimeType, 'image/')
+			&& $this->config->getSystemValueString('preview_imaginary_url', 'invalid') !== 'invalid') {
+
+			$crop = $specifications[0]['crop'] ?? false;
+			$preview = $this->getSmallImagePreview($previewFolder, $file, $mimeType, $previewVersion, $crop);
+
+			if ($preview->getSize() === 0) {
+				$preview->delete();
+				throw new NotFoundException('Cached preview size 0, invalid!');
+			}
+
+			return $preview;
+		}
+
 		// Get the max preview and infer the max preview sizes from that
 		$maxPreview = $this->getMaxPreview($previewFolder, $file, $mimeType, $previewVersion);
 		$maxPreviewImage = null; // only load the image when we need it
@@ -205,6 +220,64 @@ class Generator {
 		return $preview;
 	}
 
+	private function getSmallImagePreview(ISimpleFolder $previewFolder, File $file, string $mimeType, string $prefix, bool $crop) {
+		$nodes = $previewFolder->getDirectoryListing();
+
+		foreach ($nodes as $node) {
+			$name = $node->getName();
+			if (($prefix === '' || strpos($name, $prefix) === 0) && strpos($name, '250-250')) {
+				return $node;
+			}
+		}
+
+		$previewProviders = $this->previewManager->getProviders();
+		foreach ($previewProviders as $supportedMimeType => $providers) {
+			// Filter out providers that does not support this mime
+			if (!preg_match($supportedMimeType, $mimeType)) {
+				continue;
+			}
+
+			foreach ($providers as $providerClosure) {
+				$provider = $this->helper->getProvider($providerClosure);
+				if (!($provider instanceof IProviderV2)) {
+					continue;
+				}
+
+				if (!$provider->isAvailable($file)) {
+					continue;
+				}
+
+				$preview = $this->helper->getThumbnail($provider, $file, 250, 250, true);
+
+				if (!($preview instanceof IImage)) {
+					continue;
+				}
+
+				// Try to get the extension.
+				try {
+					$ext = $this->getExtention($preview->dataMimeType());
+				} catch (\InvalidArgumentException $e) {
+					// Just continue to the next iteration if this preview doesn't have a valid mimetype
+					continue;
+				}
+
+				$path = $this->generatePath(250, 250, $crop, $preview->dataMimeType(), $prefix);
+				try {
+					$file = $previewFolder->newFile($path);
+					if ($preview instanceof IStreamImage) {
+						$file->putContent($preview->resource());
+					} else {
+						$file->putContent($preview->data());
+					}
+				} catch (NotPermittedException $e) {
+					throw new NotFoundException();
+				}
+
+				return $file;
+			}
+		}
+	}
+
 	/**
 	 * @param ISimpleFolder $previewFolder
 	 * @param File $file
@@ -257,7 +330,7 @@ class Generator {
 					continue;
 				}
 
-				$path = $prefix . (string)$preview->width() . '-' . (string)$preview->height() . '-max.' . $ext;
+				$path = $this->generatePath(250, 250, $crop, $preview->dataMimeType(), $prefix);
 				try {
 					$file = $previewFolder->newFile($path);
 					if ($preview instanceof IStreamImage) {
