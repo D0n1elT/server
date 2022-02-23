@@ -330,7 +330,7 @@ class Generator {
 					continue;
 				}
 
-				$path = $this->generatePath(250, 250, $crop, $preview->dataMimeType(), $prefix);
+				$path = $prefix . (string)$preview->width() . '-' . (string)$preview->height() . '-max.' . $ext;
 				try {
 					$file = $previewFolder->newFile($path);
 					if ($preview instanceof IStreamImage) {
