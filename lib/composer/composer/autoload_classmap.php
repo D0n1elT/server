@@ -1016,7 +1016,6 @@ return array(
     'OC\\DB\\Connection' => $baseDir . '/lib/private/DB/Connection.php',
     'OC\\DB\\ConnectionAdapter' => $baseDir . '/lib/private/DB/ConnectionAdapter.php',
     'OC\\DB\\ConnectionFactory' => $baseDir . '/lib/private/DB/ConnectionFactory.php',
-    'OC\\DB\\DryRunConnectionDecorator' => $baseDir . '/lib/private/DB/DryRunConnectionDecorator.php',
     'OC\\DB\\Exceptions\\DbalException' => $baseDir . '/lib/private/DB/Exceptions/DbalException.php',
     'OC\\DB\\MigrationException' => $baseDir . '/lib/private/DB/MigrationException.php',
     'OC\\DB\\MigrationService' => $baseDir . '/lib/private/DB/MigrationService.php',

@@ -49,9 +49,6 @@ class AddMissingColumns extends Command {
 	/** @var Connection */
 	private $connection;
 
-	/** @var Connection */
-	private $wrapperConnection;
-
 	/** @var EventDispatcherInterface */
 	private $dispatcher;
 
@@ -59,7 +56,6 @@ class AddMissingColumns extends Command {
 		parent::__construct();
 
 		$this->connection = $connection;
-		$this->wrapperConnection = $connection;
 		$this->dispatcher = $dispatcher;
 	}
 
@@ -71,11 +67,7 @@ class AddMissingColumns extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		if ($input->getOption('dry-run')) {
-			$this->connection = new DryRunConnectionDecorator($this->connection, $output);
-		}
-
-		$this->addCoreColumns($output);
+		$this->addCoreColumns($output, $input->getOption('dry-run'));
 
 		// Dispatch event so apps can also update columns if needed
 		$event = new GenericEvent($output);
@@ -87,12 +79,13 @@ class AddMissingColumns extends Command {
 	 * add missing indices to the share table
 	 *
 	 * @param OutputInterface $output
+	 * @param bool $dryRun If true, will return the sql queries instead of running them.
 	 * @throws \Doctrine\DBAL\Schema\SchemaException
 	 */
-	private function addCoreColumns(OutputInterface $output) {
+	private function addCoreColumns(OutputInterface $output, bool $dryRun) {
 		$output->writeln('<info>Check columns of the comments table.</info>');
 
-		$schema = new SchemaWrapper($this->wrapperConnection);
+		$schema = new SchemaWrapper($this->connection);
 		$updated = false;
 
 		if ($schema->hasTable('comments')) {
@@ -103,7 +96,10 @@ class AddMissingColumns extends Command {
 					'notnull' => false,
 					'length' => 64,
 				]);
-				$this->connection->migrateToSchema($schema->getWrappedSchema());
+				$sqlQueries = $this->connection->migrateToSchema($schema->getWrappedSchema(), $dryRun);
+				if ($dryRun && $sqlQueries !== null) {
+					$output->writeln($sqlQueries);
+				}
 				$updated = true;
 				$output->writeln('<info>Comments table updated successfully.</info>');
 			}
