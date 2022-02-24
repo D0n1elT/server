@@ -194,6 +194,7 @@ EOD;
 		$this->groupManager = $this->createMock(IGroupManager::class);
 		$this->caldavBackend = $this->createMock(CalDavBackend::class);
 		$this->timeFactory = $this->createMock(ITimeFactory::class);
+		$this->config = $this->createMock(IConfig::class);
 
 		$this->caldavBackend->method('getShares')->willReturn([]);
 
@@ -202,7 +203,8 @@ EOD;
 			$this->userManager,
 			$this->groupManager,
 			$this->caldavBackend,
-			$this->timeFactory);
+			$this->timeFactory,
+			$this->config);
 	}
 
 	public function testOnCalendarObjectDelete():void {
