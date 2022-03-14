@@ -40,6 +40,7 @@ describe('CalDavSettings', () => {
 						sendInvitations: true,
 						generateBirthdayCalendar: true,
 						sendEventReminders: true,
+						sendEventRemindersToSharedGroupMembers: true,
 						sendEventRemindersPush: true,
 					}
 				},
@@ -61,6 +62,10 @@ describe('CalDavSettings', () => {
 			'Send notifications for events'
 		)
 		expect(sendEventReminders).toBeChecked()
+		const sendEventRemindersToSharedGroupMembers = TLUtils.getByLabelText(
+			'Send reminder notifications to calendar sharees as well'
+		)
+		expect(sendEventRemindersToSharedGroupMembers).toBeChecked()
 		const sendEventRemindersPush = TLUtils.getByLabelText(
 			'Enable notifications for events via push'
 		)
@@ -102,6 +107,18 @@ describe('CalDavSettings', () => {
 			'sendEventReminders',
 			'no'
 		)
+
+		expect(sendEventRemindersToSharedGroupMembers).toBeDisabled()
+		OCP.AppConfig.setValue.mockClear()
+		await userEvent.click(sendEventReminders)
+		expect(sendEventReminders).toBeChecked()
+		expect(OCP.AppConfig.setValue).toHaveBeenCalledWith(
+			'dav',
+			'sendEventReminders',
+			'yes'
+		)
+		expect(sendEventRemindersToSharedGroupMembers).toBeEnabled()
+
 		expect(sendEventRemindersPush).toBeDisabled()
 		OCP.AppConfig.setValue.mockClear()
 		await userEvent.click(sendEventReminders)

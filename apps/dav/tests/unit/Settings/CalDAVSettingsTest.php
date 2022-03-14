@@ -55,14 +55,16 @@ class CalDAVSettingsTest extends TestCase {
 			   ['dav', 'sendInvitations', 'yes'],
 			   ['dav', 'generateBirthdayCalendar', 'yes'],
 			   ['dav', 'sendEventReminders', 'yes'],
+			   ['dav', 'sendEventRemindersToSharedGroupMembers', 'yes'],
 			   ['dav', 'sendEventRemindersPush', 'no'],
 		   )
-		   ->will($this->onConsecutiveCalls('yes', 'no', 'yes', 'yes'));
+		   ->will($this->onConsecutiveCalls('yes', 'no', 'yes', 'yes', 'yes'));
 		$this->initialState->method('provideInitialState')
 			->withConsecutive(
 				['sendInvitations', true],
 				['generateBirthdayCalendar', false],
 				['sendEventReminders', true],
+				['sendEventRemindersToSharedGroupMembers', true],
 				['sendEventRemindersPush', true],
 			);
 		$result = $this->settings->getForm();
